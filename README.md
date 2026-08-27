@@ -12,7 +12,17 @@ Single-file daily scheduler — open `daily-scheduler-pro.html` in any browser.
 - LocalStorage persistence
 
 ## Run
-Just open `daily-scheduler-pro.html` directly. No build step.
+Just open `daily-scheduler-pro.html` directly. No build step. Or visit the GitHub Pages site: https://swarnavacodes.github.io/scheduler-pro/
+
+## Tests (Playwright)
+```bash
+npm install
+npx playwright install chromium
+npm test              # run all e2e tests headless
+npm run test:headed   # headed mode
+npm run test:ui       # UI mode
+```
+Tests live in `tests/e2e.spec.js` and cover tasks, filters, views, theme, timer, habits, export and more. They run against `http://localhost:3000` via `http-server`.
 
 ## Upcoming
 JSON file persistence via tiny Node server (`scheduler-data.json`) — in progress.
