@@ -4886,5 +4886,9 @@
     // Start
     init();
   </script>
+  <script type="module">
+    import { initSupabaseSync } from './js/supabase-sync.js';
+    initSupabaseSync().catch(e => console.warn('[sync] init failed', e));
+  </script>
 </body>
 </html>
