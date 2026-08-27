@@ -2205,6 +2205,20 @@
       padding: 14px 0;
       opacity: 0.7;
     }
+
+    /* Now / Next execution card */
+    .now-next-card { margin-bottom: 16px; }
+    .now-next-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .now-next-item { border: 1px solid var(--border); border-radius: 12px; padding: 12px; background: var(--surface); min-width: 0; }
+    .now-next-label { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: var(--text-secondary); margin-bottom: 5px; }
+    .now-next-time { font-size: .72rem; color: var(--accent); font-weight: 700; margin-bottom: 3px; }
+    .now-next-title { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .now-next-meta { font-size: .7rem; color: var(--text-secondary); margin-top: 3px; }
+    .now-next-actions { display:flex; gap:6px; margin-top:9px; }
+    .now-next-actions .btn { padding: 6px 9px; font-size: .72rem; }
+    .now-next-empty { color: var(--text-secondary); font-size: .78rem; padding: 4px 0; }
+    .drop-time-indicator { position:absolute; right:10px; top:6px; font-size:.68rem; font-weight:700; color:var(--accent); pointer-events:none; }
+    @media (max-width: 700px) { .now-next-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -2258,6 +2272,15 @@
           <option value="forest">Forest</option>
           <option value="sepia">Sepia</option>
         </select>
+        <button class="btn btn-secondary" onclick="exportData()" title="Export all data as JSON backup">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Export
+        </button>
+        <button class="btn btn-secondary" onclick="document.getElementById('importFileInput').click()" title="Import data from a JSON backup">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Import
+        </button>
+        <input type="file" id="importFileInput" accept=".json,application/json" style="display:none" onchange="importData(this)">
         <button class="btn btn-secondary" onclick="clearCompleted()">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
           Clear Done
@@ -2397,6 +2420,19 @@
           <div style="flex: 1; min-width: 0;">
             <div class="intention-label">What's the ONE thing today?</div>
             <div id="intentionContent"></div>
+          </div>
+        </div>
+
+        <div class="card now-next-card" id="nowNextCard">
+          <div class="now-next-grid">
+            <div class="now-next-item">
+              <div class="now-next-label">Now</div>
+              <div id="nowTaskContent" class="now-next-empty">Nothing in progress</div>
+            </div>
+            <div class="now-next-item">
+              <div class="now-next-label">Next</div>
+              <div id="nextTaskContent" class="now-next-empty">No upcoming task</div>
+            </div>
           </div>
         </div>
 
@@ -3083,6 +3119,7 @@
       populateTimeSelects();
       loadTasks();
       updateStats();
+      renderNowNext();
       renderIntention();
       renderHabits();
       renderQuote();
@@ -3090,6 +3127,7 @@
       loadWeather();
       setInterval(loadWeather, WEATHER_TTL); // Auto-refresh weather every 30 min
       setInterval(updateClock, 1000);
+      setInterval(renderNowNext, 30000);
       scrollScheduleToDefault();
       highlightCurrentTime();
       loadReminderSettings();
@@ -3146,6 +3184,7 @@
       updateDateDisplay();
       renderTasks();
       updateStats();
+      renderNowNext();
       renderIntention();
       renderHabits();
       scrollScheduleToDefault();
@@ -3295,6 +3334,7 @@
       const targetKey = document.getElementById('taskDate').value || currentDateKey;
       const recur = document.getElementById('taskRecur').value;
 
+      const existingTask = editingTaskId ? tasks.find(t => t.id === editingTaskId) : null;
       const task = {
         id: editingTaskId || Date.now(),
         title,
@@ -3306,7 +3346,8 @@
         startMin: min,
         duration,
         notes: document.getElementById('taskNotes').value.trim(),
-        completed: false
+        completed: existingTask ? Boolean(existingTask.completed) : false,
+        ...(existingTask && existingTask.seriesId ? { seriesId: existingTask.seriesId, recur: existingTask.recur, dateKey: targetKey } : {})
       };
 
       let seriesCreated = false;
@@ -3335,6 +3376,7 @@
       saveStore();
       renderTasks();
       updateStats();
+      renderNowNext();
       closeModal();
       if (seriesCreated) {
         const [y, m, d] = targetKey.split('-').map(Number);
@@ -3529,28 +3571,32 @@
     function handleDrop(e) {
       e.preventDefault();
       const slotContent = e.currentTarget.querySelector('.slot-content');
-      if (slotContent) {
-        slotContent.classList.remove('drag-over');
-      }
-      
+      if (slotContent) slotContent.classList.remove('drag-over');
       if (!draggedTaskId) return;
-      
-      // Find the target hour from the time-slot ancestor
+
       const timeSlot = e.currentTarget.closest('.time-slot');
       if (!timeSlot) return;
-      
       const targetHour = parseInt(timeSlot.dataset.hour);
       if (isNaN(targetHour)) return;
-      
-      // Find the task and update its time
+
       const task = tasks.find(t => t.id === draggedTaskId);
-      if (task && task.startHour !== targetHour) {
+      if (!task) return;
+
+      // Use the vertical drop position to preserve useful time precision.
+      // The day grid snaps to the same 15-minute increments used by the editor.
+      const rect = (slotContent || e.currentTarget).getBoundingClientRect();
+      const y = Math.max(0, Math.min(rect.height - 1, e.clientY - rect.top));
+      const minutesFromTop = Math.round((y / Math.max(rect.height, 1)) * 60 / 15) * 15;
+      const targetMin = Math.min(45, Math.max(0, minutesFromTop));
+
+      if (task.startHour !== targetHour || task.startMin !== targetMin) {
         task.startHour = targetHour;
-        task.startMin = 0; // Reset to start of hour when dragging
+        task.startMin = targetMin;
         saveStore();
         renderTasks();
         updateStats();
-        showToast(`Moved to ${formatTime(targetHour, task.startMin)}`);
+        renderNowNext();
+        showToast(`Moved to ${formatTime(targetHour, targetMin)}`);
       }
     }
 
@@ -3562,6 +3608,7 @@
         saveStore();
         renderTasks();
         updateStats();
+        renderNowNext();
       }
     }
 
@@ -3625,8 +3672,10 @@
             removed += before - store[key].length;
           });
           saveStore();
+          tasks = store[currentDateKey] || [];
           renderTasks();
           updateStats();
+          renderNowNext();
           showToast(`Deleted ${removed} task${removed === 1 ? '' : 's'} from series`);
         } : null
       });
@@ -3699,6 +3748,103 @@
         }
       });
     }
+
+    // ── JSON Export / Import ──────────────────────────────────────────────────
+
+    function exportData() {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const stamp = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
+      const filename = `scheduler-backup-${stamp}.json`;
+
+      const payload = JSON.stringify(store, null, 2);
+      const blob = new Blob([payload], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      // Count totals for feedback
+      let taskDays = 0, taskCount = 0;
+      Object.keys(store).forEach(k => {
+        if (Array.isArray(store[k])) { taskDays++; taskCount += store[k].length; }
+      });
+      const habitCount = (store.habits || []).length;
+      showToast(`Exported ${taskCount} tasks (${taskDays} days) · ${habitCount} habits → ${filename}`);
+    }
+
+    function importData(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        let imported;
+        try {
+          imported = JSON.parse(e.target.result);
+        } catch {
+          showToast('❌ Invalid JSON file — could not parse');
+          input.value = '';
+          return;
+        }
+
+        // Basic sanity check: must be a plain object
+        if (typeof imported !== 'object' || Array.isArray(imported) || imported === null) {
+          showToast('❌ Unrecognised backup format');
+          input.value = '';
+          return;
+        }
+
+        // Count what we're about to import
+        let importedDays = 0, importedTasks = 0;
+        Object.keys(imported).forEach(k => {
+          if (Array.isArray(imported[k])) { importedDays++; importedTasks += imported[k].length; }
+        });
+        const importedHabits = Array.isArray(imported.habits) ? imported.habits.length : 0;
+
+        const msg = `Import ${importedTasks} tasks (${importedDays} days) and ${importedHabits} habits?\n\nExisting data for the same days will be overwritten. Other days are kept.`;
+        if (!confirm(msg)) { input.value = ''; return; }
+
+        // Snapshot current store for undo
+        const previousStore = JSON.parse(JSON.stringify(store));
+
+        // Merge: imported day arrays and special keys overwrite matching keys
+        Object.keys(imported).forEach(k => { store[k] = imported[k]; });
+
+        // Ensure schema fields exist
+        if (!Array.isArray(store.habits)) store.habits = [];
+        if (!store.habitLogs || typeof store.habitLogs !== 'object') store.habitLogs = {};
+
+        saveStore();
+        // Reload current day's tasks
+        tasks = store[currentDateKey] || (store[currentDateKey] = []);
+        renderTasks();
+        updateStats();
+        renderHabits();
+        input.value = ''; // allow re-importing same file
+
+        showToast(
+          `✅ Imported ${importedTasks} tasks · ${importedHabits} habits`,
+          'Undo',
+          () => {
+            // Restore full previous store
+            Object.keys(store).forEach(k => delete store[k]);
+            Object.assign(store, previousStore);
+            saveStore();
+            tasks = store[currentDateKey] || (store[currentDateKey] = []);
+            renderTasks();
+            updateStats();
+            renderHabits();
+            showToast('Import undone — previous data restored');
+          }
+        );
+      };
+      reader.onerror = () => { showToast('❌ Could not read file'); input.value = ''; };
+      reader.readAsText(file);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     function setFilter(filter) {
       currentFilter = filter;
@@ -4272,7 +4418,8 @@
       try {
         const n = new Notification('Task starting soon', {
           body: `"${task.title}" starts at ${formatTime(task.startHour, task.startMin)}`,
-          tag: `task-${task.id}`
+          tag: `task-${task.id}`,
+          requireInteraction: true   // keep visible until user dismisses
         });
         n.onclick = () => {
           window.focus();
@@ -4423,6 +4570,46 @@
     function selectMiniDay(key) {
       document.getElementById('taskDate').value = key;
       document.getElementById('miniCalendar').classList.remove('open');
+    }
+
+    function renderNowNext() {
+      const nowEl = document.getElementById('nowTaskContent');
+      const nextEl = document.getElementById('nextTaskContent');
+      if (!nowEl || !nextEl) return;
+
+      const today = dateKey(new Date());
+      if (currentDateKey !== today) {
+        nowEl.innerHTML = '<div class="now-next-empty">Switch to Today to see what is next.</div>';
+        nextEl.innerHTML = '<div class="now-next-empty">Today view only</div>';
+        return;
+      }
+
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const pending = tasks.filter(t => !t.completed);
+      const active = pending.filter(t => {
+        const start = t.startHour * 60 + t.startMin;
+        return start <= nowMin && nowMin < start + Math.max(1, Number(t.duration) || 1);
+      }).sort((a,b) => (a.startHour*60+a.startMin) - (b.startHour*60+b.startMin))[0];
+      const upcoming = pending.filter(t => (t.startHour*60+t.startMin) > nowMin)
+        .sort((a,b) => (a.startHour*60+a.startMin) - (b.startHour*60+b.startMin))[0];
+
+      const taskHtml = (t, action) => {
+        if (!t) return '<div class="now-next-empty">Nothing scheduled</div>';
+        const time = formatTime(t.startHour, t.startMin);
+        const end = t.startHour*60 + t.startMin + Number(t.duration || 0);
+        const endText = formatTime(Math.floor(end / 60) % 24, end % 60);
+        return `<div class="now-next-time">${time} · ${t.duration}m${action === 'now' ? ` · until ${endText}` : ''}</div>
+          <div class="now-next-title" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</div>
+          <div class="now-next-meta">${escapeHtml(t.category)} · ${escapeHtml(t.priority)} priority</div>
+          <div class="now-next-actions">
+            ${action === 'now' ? `<button class="btn btn-primary" onclick="startTaskFocus(${t.id}, event)">Focus</button>` : ''}
+            <button class="btn btn-secondary" onclick="editTask(${t.id}, event)">Edit</button>
+            <button class="btn btn-secondary" onclick="toggleTask(${t.id}, event)">Done</button>
+          </div>`;
+      };
+      nowEl.innerHTML = taskHtml(active, 'now');
+      nextEl.innerHTML = taskHtml(upcoming, 'next');
     }
 
     function updateStats() {
