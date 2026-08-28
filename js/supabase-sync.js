@@ -93,18 +93,19 @@ function renderAuthUI() {
     const header = document.querySelector('header') || document.body;
     host = document.createElement('div');
     host.id = 'authArea';
-    host.style.cssText = 'display:flex;gap:8px;align-items:center;';
+    host.style.cssText = 'display:flex;align-items:center;margin-left:auto;';
     header.appendChild(host);
   }
   if (!supabase) { host.innerHTML = ''; return; }
   if (!currentUser) {
     host.innerHTML = `
-      <button class="btn btn-primary" id="googleSignInBtn">Sign in with Google</button>
-      <span style="font-size:0.75rem;color:var(--text-secondary)">or</span>
-      <input id="emailInput" placeholder="email" type="email" style="padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:0.8rem;width:160px">
-      <input id="pwInput" placeholder="password" type="password" style="padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:0.8rem;width:120px">
-      <button class="btn btn-secondary" id="emailSignInBtn">Sign in</button>
-      <span id="syncStatus" style="font-size:0.75rem;color:var(--text-secondary)"></span>`;
+      <div style="display:flex;gap:12px;align-items:center">
+        <button class="btn btn-primary" id="googleSignInBtn">Sign in with Google</button>
+        <span style="font-size:0.75rem;color:var(--text-secondary)">or</span>
+        <input id="emailInput" placeholder="email" type="email" style="padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:0.8rem;width:150px">
+        <input id="pwInput" placeholder="password" type="password" style="padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:0.8rem;width:110px">
+        <button class="btn btn-secondary" id="emailSignInBtn">Sign in</button>
+      </div>`;
     host.querySelector('#googleSignInBtn').onclick = async () => {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -118,22 +119,27 @@ function renderAuthUI() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) alert(error.message);
     };
-    // Enter to submit
     ['#emailInput','#pwInput'].forEach(sel => host.querySelector(sel).addEventListener('keydown', e => {
       if (e.key === 'Enter') host.querySelector('#emailSignInBtn').click();
     }));
-    syncStatusEl = host.querySelector('#syncStatus');
+    syncStatusEl = null;
   } else {
     const name = currentUser.user_metadata?.full_name || currentUser.email || 'Account';
     const avatar = currentUser.user_metadata?.avatar_url || '';
+    // Profile chip + sync status, pushed to the top-right corner
     host.innerHTML = `
-      ${avatar ? `<img src="${avatar}" alt="" style="width:28px;height:28px;border-radius:50%">` : ''}
-      <span style="font-size:0.85rem">${name}</span>
-      <button class="btn btn-secondary" id="signOutBtn">Sign out</button>
-      <span id="syncStatus" style="font-size:0.75rem;color:var(--text-secondary)"></span>
+      <div id="userProfile" style="display:flex;align-items:center;gap:10px;padding:6px 12px 6px 6px;border:1px solid var(--border);border-radius:999px;background:var(--card);">
+        ${avatar ? `<img src="${avatar}" alt="" style="width:30px;height:30px;border-radius:50%">` : `<div style="width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:600">${name.charAt(0).toUpperCase()}</div>`}
+        <span style="font-size:0.85rem;font-weight:500;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span>
+        <button id="signOutBtn" style="background:transparent;border:none;cursor:pointer;color:var(--text-secondary);display:flex;align-items:center;padding:4px;" title="Sign out">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        </button>
+      </div>
+      <span id="syncStatus" style="display:flex;align-items:center;gap:6px;font-size:0.8rem;font-weight:500;margin-left:4px;"></span>
     `;
-    host.querySelector('#signOutBtn').onclick = async () => { await supabase.auth.signOut(); location.reload(); };
     syncStatusEl = host.querySelector('#syncStatus');
+    host.querySelector('#signOutBtn').onclick = async () => { await supabase.auth.signOut(); location.reload(); };
+    updateSyncUI(currentUser && navigator.onLine ? 'synced' : (currentUser ? 'offline' : 'local'));
   }
 }
 
@@ -141,10 +147,17 @@ function updateSyncUI(state) {
   if (!syncStatusEl) syncStatusEl = document.getElementById('syncStatus');
   if (!syncStatusEl) return;
   const pending = getPending().length;
-  if (state === 'local') syncStatusEl.textContent = '';
-  else if (state === 'offline' || !navigator.onLine) syncStatusEl.textContent = pending ? `Offline (${pending} pending)` : 'Offline';
-  else if (pending) syncStatusEl.textContent = `Syncing (${pending})…`;
-  else syncStatusEl.textContent = 'Sync: ✓';
+  if (state === 'local') {
+    syncStatusEl.innerHTML = '';
+  } else if (state === 'offline' || !navigator.onLine) {
+    syncStatusEl.innerHTML = pending
+      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8" rx="1"></rect></svg><span style="color:#fbbf24">' + pending + ' pending</span>'
+      : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8" rx="1"></rect></svg><span style="color:#fbbf24">Offline</span>';
+  } else if (pending) {
+    syncStatusEl.innerHTML = '<span style="color:#34d399">Syncing (' + pending + ')…</span>';
+  } else {
+    syncStatusEl.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg><span style="color:#34d399">Synced</span>';
+  }
 }
 
 // ---- Migration: LS -> server if server empty ----
