@@ -42,6 +42,8 @@ export async function initSupabaseSync() {
       await pullFromServer();
       await flushQueue();
       subscribeRealtime();
+    } else {
+      unsubscribeRealtime();
     }
     updateSyncUI(currentUser ? 'synced' : 'local');
   });
@@ -76,6 +78,11 @@ export async function initSupabaseSync() {
 
   window.addEventListener('online', flushQueue);
   window.addEventListener('offline', () => updateSyncUI('offline'));
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && currentUser) pullFromServer();
+  });
+  // fallback poll every 30s when logged in
+  setInterval(() => { if (currentUser && document.visibilityState === 'visible') pullFromServer(); }, 30000);
   updateSyncUI(currentUser ? (navigator.onLine ? 'synced' : 'offline') : 'local');
 }
 
@@ -218,15 +225,18 @@ async function flushQueue() {
 }
 
 let realtimeChannel = null;
+let subscribedUserId = null;
 function subscribeRealtime() {
   if (!currentUser || !supabase) return;
+  if (realtimeChannel && subscribedUserId === currentUser.id) return; // already subscribed for this user
   if (realtimeChannel) {
     try { supabase.removeChannel(realtimeChannel); } catch {}
     realtimeChannel = null;
+    subscribedUserId = null;
   }
+  subscribedUserId = currentUser.id;
   realtimeChannel = supabase.channel('user_data:' + currentUser.id)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'user_data', filter: `user_id=eq.${currentUser.id}` }, (payload) => {
-      // ignore own echo if we just pushed
       if (getPending().length) return;
       const serverStore = payload.new?.store;
       if (!serverStore) return;
@@ -235,6 +245,13 @@ function subscribeRealtime() {
       log('realtime update');
     })
     .subscribe();
+}
+function unsubscribeRealtime() {
+  if (realtimeChannel) {
+    try { supabase.removeChannel(realtimeChannel); } catch {}
+    realtimeChannel = null;
+    subscribedUserId = null;
+  }
 }
 
 // Hook for app's saveStore to call
