@@ -91,13 +91,30 @@ function renderAuthUI() {
   }
   if (!supabase) { host.innerHTML = ''; return; }
   if (!currentUser) {
-    host.innerHTML = `<button class="btn btn-primary" id="googleSignInBtn">Sign in with Google</button><span id="syncStatus" style="font-size:0.75rem;color:var(--text-secondary)"></span>`;
+    host.innerHTML = `
+      <button class="btn btn-primary" id="googleSignInBtn">Sign in with Google</button>
+      <span style="font-size:0.75rem;color:var(--text-secondary)">or</span>
+      <input id="emailInput" placeholder="email" type="email" style="padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:0.8rem;width:160px">
+      <input id="pwInput" placeholder="password" type="password" style="padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:0.8rem;width:120px">
+      <button class="btn btn-secondary" id="emailSignInBtn">Sign in</button>
+      <span id="syncStatus" style="font-size:0.75rem;color:var(--text-secondary)"></span>`;
     host.querySelector('#googleSignInBtn').onclick = async () => {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: window.location.origin + window.location.pathname }
       });
     };
+    host.querySelector('#emailSignInBtn').onclick = async () => {
+      const email = host.querySelector('#emailInput').value.trim();
+      const password = host.querySelector('#pwInput').value;
+      if (!email || !password) { alert('Enter email and password'); return; }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) alert(error.message);
+    };
+    // Enter to submit
+    ['#emailInput','#pwInput'].forEach(sel => host.querySelector(sel).addEventListener('keydown', e => {
+      if (e.key === 'Enter') host.querySelector('#emailSignInBtn').click();
+    }));
     syncStatusEl = host.querySelector('#syncStatus');
   } else {
     const name = currentUser.user_metadata?.full_name || currentUser.email || 'Account';
