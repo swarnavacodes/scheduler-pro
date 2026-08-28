@@ -162,17 +162,37 @@ async function migrateLocalIfNeeded() {
   }
 }
 
+let lastPushAt = 0;
 async function pullFromServer() {
   if (!currentUser || !supabase) return;
+  // don't pull if we just pushed within last 2s (avoid race where pull overwrites just-saved local)
+  if (Date.now() - lastPushAt < 2000) { log('skip pull: just pushed'); return; }
   const { data, error } = await supabase.from('user_data').select('store,updated_at').eq('user_id', currentUser.id).maybeSingle();
   if (error || !data?.store) return;
   const localRaw = localStorage.getItem(LS_KEY);
-  // last-write-wins: if server newer, overwrite LS (simple). Compare updated_at vs local pending
+  let localStore = null;
+  try { localStore = localRaw ? JSON.parse(localRaw) : null; } catch {}
   const serverStore = data.store;
-  // if local has pending, don't overwrite — let flush push local
   if (getPending().length) { log('skip pull: pending'); return; }
+  // If local has any task that server doesn't, push local instead of pulling (last-write-wins for new local task)
+  if (localStore) {
+    const localStr = JSON.stringify(localStore);
+    const serverStr = JSON.stringify(serverStore);
+    if (localStr !== serverStr) {
+      // check if local has a task title server doesn't
+      const localTitles = new Set(Object.values(localStore).flat().filter(Array.isArray).flat().map(t => t.title).concat(Object.values(localStore).flat().filter(t => t && t.title).map(t => t.title)));
+      // simpler: if local has more tasks total than server, push
+      const localCount = Object.values(localStore).reduce((n, v) => n + (Array.isArray(v) ? v.length : 0), 0);
+      const serverCount = Object.values(serverStore).reduce((n, v) => n + (Array.isArray(v) ? v.length : 0), 0);
+      if (localCount > serverCount) {
+        log(`skip pull: local has ${localCount} tasks, server has ${serverCount} — will push`);
+        await pushSync(localStore);
+        return;
+      }
+    }
+  }
+  if (localRaw && localRaw === JSON.stringify(serverStore)) return;
   localStorage.setItem(LS_KEY, JSON.stringify(serverStore));
-  // trigger app reload of store if function exists
   if (typeof window.loadStore === 'function' && typeof window.renderTasks === 'function') {
     try { window.loadStore(); window.renderTasks(); window.updateStats?.(); } catch {}
   }
