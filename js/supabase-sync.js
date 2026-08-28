@@ -217,9 +217,14 @@ async function flushQueue() {
   if (!error) setPending([]);
 }
 
+let realtimeChannel = null;
 function subscribeRealtime() {
   if (!currentUser || !supabase) return;
-  supabase.channel('user_data:' + currentUser.id)
+  if (realtimeChannel) {
+    try { supabase.removeChannel(realtimeChannel); } catch {}
+    realtimeChannel = null;
+  }
+  realtimeChannel = supabase.channel('user_data:' + currentUser.id)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'user_data', filter: `user_id=eq.${currentUser.id}` }, (payload) => {
       // ignore own echo if we just pushed
       if (getPending().length) return;
