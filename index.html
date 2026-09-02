@@ -4048,7 +4048,7 @@
       document.querySelector('.schedule-container').style.display = view === 'day' ? '' : 'none';
       if (view === 'month') renderCalendar();
       else if (view === 'week') { renderWeek(); scrollWeekToDefault(); }
-      else if (view === 'agenda') renderAgenda();
+      else if (view === 'agenda') { renderAgenda(); if (window.innerWidth <= 900) document.getElementById('agendaContainer').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
       else if (view === 'matrix') renderMatrix();
       else scrollScheduleToDefault();
     }
