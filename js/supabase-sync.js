@@ -13,6 +13,30 @@ let syncStatusEl = null;
 
 function log(...args) { console.debug('[sync]', ...args); }
 
+// Merge server store into local store, preserving local completed states.
+// Store shape: { [dateKey]: [ { id, title, completed, ... }, ... ] }
+function mergeStores(local, server) {
+  if (!local || !server) return server || local || {};
+  const merged = { ...server };
+  for (const dateKey of Object.keys(local)) {
+    const localTasks = local[dateKey];
+    const serverTasks = server[dateKey];
+    if (!Array.isArray(localTasks)) { merged[dateKey] = localTasks; continue; }
+    if (!Array.isArray(serverTasks)) { merged[dateKey] = localTasks; continue; }
+    const serverMap = new Map(serverTasks.map(t => [t.id, t]));
+    const localMap = new Map(localTasks.map(t => [t.id, t]));
+    const allIds = new Set([...serverMap.keys(), ...localMap.keys()]);
+    merged[dateKey] = [...allIds].map(id => {
+      const s = serverMap.get(id);
+      const l = localMap.get(id);
+      if (l && s) return { ...s, completed: l.completed ? true : s.completed };
+      if (l) return l;
+      return s;
+    }).filter(Boolean);
+  }
+  return merged;
+}
+
 export async function initSupabaseSync() {
   if (DISABLE_SYNC) { log('disabled'); updateSyncUI('local'); return; }
 
@@ -205,9 +229,10 @@ async function pullFromServer() {
     }
   }
   if (localRaw && localRaw === JSON.stringify(serverStore)) return;
-  localStorage.setItem(LS_KEY, JSON.stringify(serverStore));
+  const merged = localStore ? mergeStores(localStore, serverStore) : serverStore;
+  localStorage.setItem(LS_KEY, JSON.stringify(merged));
   if (typeof window.loadStore === 'function' && typeof window.renderTasks === 'function') {
-    try { window.loadStore(); window.renderTasks(); window.updateStats?.(); } catch {}
+    try { window.loadStore(); window.renderTasks(); window.updateStats?.(); window.renderNowNext?.(); } catch {}
   }
 }
 
@@ -273,8 +298,12 @@ function subscribeRealtime() {
       if (getPending().length) return;
       const serverStore = payload.new?.store;
       if (!serverStore) return;
-      localStorage.setItem(LS_KEY, JSON.stringify(serverStore));
-      if (typeof window.loadStore === 'function') try { window.loadStore(); window.renderTasks(); window.updateStats?.(); } catch {}
+      const localRaw = localStorage.getItem(LS_KEY);
+      let localStore = null;
+      try { localStore = localRaw ? JSON.parse(localRaw) : null; } catch {}
+      const merged = localStore ? mergeStores(localStore, serverStore) : serverStore;
+      localStorage.setItem(LS_KEY, JSON.stringify(merged));
+      if (typeof window.loadStore === 'function') try { window.loadStore(); window.renderTasks(); window.updateStats?.(); window.renderNowNext?.(); } catch {}
       log('realtime update');
     })
     .subscribe();
