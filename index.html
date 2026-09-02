@@ -430,6 +430,33 @@
       .view-toggle button { padding: 6px 10px; font-size: 0.72rem; }
     }
 
+    /* ── Accessibility: focus-visible outlines ── */
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .filter-chip:focus-visible,
+    .date-nav-btn:focus-visible,
+    .icon-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: 8px;
+    }
+    .view-toggle button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    /* ── Accessibility: reduced motion ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
     .sidebar::-webkit-scrollbar {
       width: 6px;
     }
@@ -2366,11 +2393,11 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
         </button>
         <div class="view-toggle">
-          <button id="dayViewBtn" onclick="setView('day')">Day</button>
-          <button id="weekViewBtn" onclick="setView('week')">Week</button>
-          <button id="monthViewBtn" onclick="setView('month')">Month</button>
-          <button id="agendaViewBtn" class="active" onclick="setView('agenda')">Agenda</button>
-          <button id="matrixViewBtn" onclick="setView('matrix')">Matrix</button>
+          <button id="dayViewBtn" onclick="setView('day')" aria-pressed="false">Day</button>
+          <button id="weekViewBtn" onclick="setView('week')" aria-pressed="false">Week</button>
+          <button id="monthViewBtn" onclick="setView('month')" aria-pressed="false">Month</button>
+          <button id="agendaViewBtn" class="active" onclick="setView('agenda')" aria-pressed="true">Agenda</button>
+          <button id="matrixViewBtn" onclick="setView('matrix')" aria-pressed="false">Matrix</button>
         </div>
         <select id="themeSelect" class="lead-select" onchange="applyTheme(this.value)" title="Color theme">
           <option value="light">Light</option>
@@ -2545,12 +2572,12 @@
 
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
           <div class="category-filters" id="categoryFilters" style="margin-bottom: 0;">
-            <div class="filter-chip active" onclick="setFilter('all')">All</div>
-            <div class="filter-chip" onclick="setFilter('work')">Work</div>
-            <div class="filter-chip" onclick="setFilter('meeting')">Meetings</div>
-            <div class="filter-chip" onclick="setFilter('personal')">Personal</div>
-            <div class="filter-chip" onclick="setFilter('break')">Breaks</div>
-            <div class="filter-chip" onclick="setFilter('other')">Other</div>
+          <div class="filter-chip active" onclick="setFilter('all')" role="button" tabindex="0" aria-pressed="true">All</div>
+          <div class="filter-chip" onclick="setFilter('work')" role="button" tabindex="0" aria-pressed="false">Work</div>
+          <div class="filter-chip" onclick="setFilter('meeting')" role="button" tabindex="0" aria-pressed="false">Meetings</div>
+          <div class="filter-chip" onclick="setFilter('personal')" role="button" tabindex="0" aria-pressed="false">Personal</div>
+          <div class="filter-chip" onclick="setFilter('break')" role="button" tabindex="0" aria-pressed="false">Breaks</div>
+          <div class="filter-chip" onclick="setFilter('other')" role="button" tabindex="0" aria-pressed="false">Other</div>
           </div>
           <input type="text" class="search-input" id="taskSearch" placeholder="Search tasks..." oninput="handleSearch(this.value)">
         </div>
@@ -2586,7 +2613,7 @@
 
   <!-- Modal -->
   <div class="modal-overlay" id="modalOverlay" onclick="closeModalOnOverlay(event)">
-    <div class="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <h2 id="modalTitle">Add New Task</h2>
       <div class="form-group">
         <label>Task Title</label>
@@ -2683,7 +2710,7 @@
 
   <!-- Confirmation Modal -->
   <div class="modal-overlay" id="confirmModalOverlay" onclick="closeConfirmModalOnOverlay(event)">
-    <div class="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
       <h2 id="confirmTitle">Are you sure?</h2>
       <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;" id="confirmMessage"></p>
       <div class="modal-actions">
@@ -2696,7 +2723,7 @@
 
   <!-- Habit Modal -->
   <div class="modal-overlay" id="habitModalOverlay" onclick="closeHabitModalOnOverlay(event)">
-    <div class="modal" style="max-width: 380px;">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="habitModalTitle" style="max-width: 380px;">
       <h2 id="habitModalTitle">New Habit</h2>
       <div class="form-group">
         <label>Habit Name</label>
@@ -2734,7 +2761,7 @@
   </div>
 
   <!-- Focus Mode Overlay -->
-  <div class="focus-overlay" id="focusOverlay">
+  <div class="focus-overlay" id="focusOverlay" role="dialog" aria-modal="true" aria-label="Focus timer">
     <div class="focus-ring-wrap">
       <svg width="340" height="340" viewBox="0 0 340 340">
         <circle cx="170" cy="170" r="156" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="10"></circle>
@@ -2755,7 +2782,7 @@
 
   <div class="reminder-container" id="reminderContainer"></div>
 
-  <div class="toast" id="toast">
+  <div class="toast" id="toast" role="status" aria-live="polite">
     <span id="toastMsg"></span>
     <button class="toast-action" id="toastAction" onclick="handleToastAction()">Undo</button>
   </div>
@@ -3637,8 +3664,9 @@
         taskEl.draggable = true;
         taskEl.dataset.taskId = task.id;
         taskEl.title = 'Double-click to edit';
+        taskEl.setAttribute('aria-label', `${task.title}, ${formatTime(task.startHour, task.startMin)}, ${task.duration} minutes, ${task.category}${task.completed ? ', completed' : ''}`);
         taskEl.innerHTML = `
-          <div class="task-checkbox ${task.completed ? 'checked' : ''}" onclick="toggleTask(${task.id}, event)">
+          <div class="task-checkbox ${task.completed ? 'checked' : ''}" onclick="toggleTask(${task.id}, event)" role="checkbox" aria-checked="${task.completed}" aria-label="Mark ${escapeHtml(task.title)} as ${task.completed ? 'incomplete' : 'complete'}" tabindex="0">
             ${task.completed ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
           </div>
           <div class="task-info">
@@ -3652,13 +3680,13 @@
             </div>
           </div>
           <div class="task-actions">
-            <button class="icon-btn" onclick="startTaskFocus(${task.id}, event)" title="Focus on this task">
+            <button class="icon-btn" onclick="startTaskFocus(${task.id}, event)" title="Focus on this task" aria-label="Focus on ${escapeHtml(task.title)}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
             </button>
-            <button class="icon-btn" onclick="editTask(${task.id}, event)" title="Edit">
+            <button class="icon-btn" onclick="editTask(${task.id}, event)" title="Edit" aria-label="Edit ${escapeHtml(task.title)}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
-            <button class="icon-btn" onclick="deleteTask(${task.id}, event)" title="Delete">
+            <button class="icon-btn" onclick="deleteTask(${task.id}, event)" title="Delete" aria-label="Delete ${escapeHtml(task.title)}">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
             </button>
           </div>
@@ -4041,6 +4069,11 @@
       document.getElementById('monthViewBtn').classList.toggle('active', view === 'month');
       document.getElementById('agendaViewBtn').classList.toggle('active', view === 'agenda');
       document.getElementById('matrixViewBtn').classList.toggle('active', view === 'matrix');
+      document.getElementById('dayViewBtn').setAttribute('aria-pressed', view === 'day');
+      document.getElementById('weekViewBtn').setAttribute('aria-pressed', view === 'week');
+      document.getElementById('monthViewBtn').setAttribute('aria-pressed', view === 'month');
+      document.getElementById('agendaViewBtn').setAttribute('aria-pressed', view === 'agenda');
+      document.getElementById('matrixViewBtn').setAttribute('aria-pressed', view === 'matrix');
       document.getElementById('calendarContainer').classList.toggle('open', view === 'month');
       document.getElementById('weekContainer').classList.toggle('open', view === 'week');
       document.getElementById('agendaContainer').classList.toggle('open', view === 'agenda');
@@ -4281,8 +4314,8 @@
         const done = Boolean(store.habitLogs[currentDateKey] && store.habitLogs[currentDateKey][h.id]);
         const streak = calculateStreak(h.id);
         return `
-          <div class="habit-item">
-            <div class="habit-check ${done ? 'checked' : ''}" onclick="toggleHabit(${h.id})" title="${done ? 'Mark as not done' : 'Mark as done'}">${done ? checkSvg : ''}</div>
+          <div class="habit-item" aria-label="${escapeHtml(h.name)}, ${h.targetDays} days per week, ${streak} day streak${done ? ', completed today' : ''}">
+            <div class="habit-check ${done ? 'checked' : ''}" onclick="toggleHabit(${h.id})" role="checkbox" aria-checked="${done}" aria-label="Mark ${escapeHtml(h.name)} as ${done ? 'incomplete' : 'complete'}" tabindex="0" title="${done ? 'Mark as not done' : 'Mark as done'}">${done ? checkSvg : ''}</div>
             <div class="habit-info">
               <div class="habit-name">${escapeHtml(h.name)}</div>
               <div class="habit-meta">
@@ -4290,8 +4323,8 @@
                 <span>${h.targetDays}d/wk</span>
               </div>
             </div>
-            <div class="habit-streak ${streak > 0 ? 'hot' : ''}" title="Current streak">🔥 ${streak}d</div>
-            <button class="icon-btn" onclick="deleteHabit(${h.id}, event)" title="Delete habit">${xSvg}</button>
+            <div class="habit-streak ${streak > 0 ? 'hot' : ''}" title="Current streak" aria-label="${streak} day streak">🔥 ${streak}d</div>
+            <button class="icon-btn" onclick="deleteHabit(${h.id}, event)" title="Delete habit" aria-label="Delete ${escapeHtml(h.name)} habit">${xSvg}</button>
           </div>
         `;
       }).join('');
@@ -4463,11 +4496,11 @@
         groups.forEach(g => {
           const items = sorted.filter(g.test);
           if (!items.length) return;
-          html += `<div class="agenda-group-title">${g.label}</div>`;
+          html += `<div class="agenda-group-title" role="heading" aria-level="3">${g.label}</div>`;
           items.forEach((t, idx) => {
             const last = idx === items.length - 1;
             html += `
-              <div class="agenda-item">
+              <div class="agenda-item" aria-label="${escapeHtml(t.title)}, ${formatTime(t.startHour, t.startMin)}, ${t.duration} minutes, ${t.category}${t.completed ? ', completed' : ''}">
                 <div class="agenda-time">${formatTime(t.startHour, t.startMin)}</div>
                 <div class="agenda-dot-col">
                   <div class="agenda-dot" style="background:${categoryColors[t.category] || '#6b7280'}"></div>
@@ -4486,9 +4519,9 @@
                       ${t.notes ? `<div class="agenda-notes">${escapeHtml(t.notes)}</div>` : ''}
                     </div>
                     <div class="agenda-actions">
-                      <div class="task-checkbox ${t.completed ? 'checked' : ''}" onclick="toggleTask(${t.id}, event)" style="margin-top: 2px;">${t.completed ? checkSvg : ''}</div>
-                      <button class="icon-btn" onclick="editTask(${t.id}, event)" title="Edit">${editSvg}</button>
-                      <button class="icon-btn" onclick="deleteTask(${t.id}, event)" title="Delete">${trashSvg}</button>
+                      <div class="task-checkbox ${t.completed ? 'checked' : ''}" onclick="toggleTask(${t.id}, event)" role="checkbox" aria-checked="${t.completed}" aria-label="Mark ${escapeHtml(t.title)} as ${t.completed ? 'incomplete' : 'complete'}" tabindex="0" style="margin-top: 2px;">${t.completed ? checkSvg : ''}</div>
+                      <button class="icon-btn" onclick="editTask(${t.id}, event)" title="Edit" aria-label="Edit ${escapeHtml(t.title)}">${editSvg}</button>
+                      <button class="icon-btn" onclick="deleteTask(${t.id}, event)" title="Delete" aria-label="Delete ${escapeHtml(t.title)}">${trashSvg}</button>
                     </div>
                   </div>
                 </div>
