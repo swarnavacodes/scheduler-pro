@@ -380,6 +380,53 @@
       .sidebar .card { padding: 12px; }
     }
 
+    /* ── Mobile header cleanup ── */
+    @media (max-width: 900px) {
+      header { gap: 10px; margin-bottom: 14px; }
+
+      .header-top { gap: 8px; }
+
+      .logo { width: 34px; height: 34px; border-radius: 10px; }
+      .logo svg { width: 18px; height: 18px; }
+      .header-left h1 { font-size: 1.15rem; }
+      .header-left .date-display { font-size: 0.8rem; margin-top: 2px; }
+      .date-nav { gap: 4px; margin-top: 2px; }
+      .date-nav-btn { width: 24px; height: 24px; font-size: 0.9rem; }
+      .date-nav-btn.text-btn { padding: 0 8px; font-size: 0.7rem; }
+
+      /* Auth pill compact */
+      #authArea { font-size: 0.75rem; }
+      #authArea img, #authArea div[style*="border-radius:50%"] { width: 24px !important; height: 24px !important; }
+
+      /* Hide non-essential controls */
+      .lead-select,
+      .header-right .lead-select { display: none; }
+      .btn-bell { padding: 6px 8px; }
+      .btn-bell svg { width: 14px; height: 14px; }
+
+      /* View toggle: horizontal scroll */
+      .view-toggle { overflow-x: auto; flex-shrink: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+      .view-toggle::-webkit-scrollbar { display: none; }
+      .view-toggle button { padding: 7px 12px; font-size: 0.78rem; white-space: nowrap; }
+
+      /* Hide Export / Import / Clear Done — rarely used on mobile */
+      .header-right .btn-secondary:not(.btn-bell) { display: none; }
+
+      /* Add Task: icon-only on mobile */
+      .header-right .btn-primary { padding: 8px 12px; font-size: 0; gap: 0; }
+      .header-right .btn-primary svg { margin: 0; }
+
+      /* Quick add bar */
+      .quick-add { gap: 6px; margin-bottom: 12px; }
+      .quick-add input { padding: 10px 12px; font-size: 0.88rem; border-radius: 10px; }
+      .quick-add select { padding: 10px 8px; font-size: 0.82rem; border-radius: 10px; min-width: 0; }
+    }
+
+    @media (max-width: 500px) {
+      .header-left h1 { font-size: 1rem; }
+      .view-toggle button { padding: 6px 10px; font-size: 0.72rem; }
+    }
+
     .sidebar::-webkit-scrollbar {
       width: 6px;
     }
