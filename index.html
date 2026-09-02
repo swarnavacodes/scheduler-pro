@@ -422,6 +422,9 @@
       .quick-add select { padding: 10px 8px; font-size: 0.82rem; border-radius: 10px; min-width: 0; }
     }
 
+    /* Focus Timer: hide presets on sidebar (default 25m) */
+    #focusPresets { display: none !important; }
+
     @media (max-width: 500px) {
       .header-left h1 { font-size: 1rem; }
       .view-toggle button { padding: 6px 10px; font-size: 0.72rem; }
@@ -1094,6 +1097,23 @@
       grid-template-columns: 1fr 1fr;
       gap: 12px;
     }
+
+    .more-options-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 0;
+      margin-bottom: 12px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.2s;
+    }
+    .more-options-toggle:hover { color: var(--accent); }
+    .more-options-toggle svg { transition: transform 0.2s; }
+    .more-options-toggle.open svg { transform: rotate(180deg); }
 
     /* Custom mini date picker */
     .date-field-wrap {
@@ -2570,7 +2590,7 @@
       <h2 id="modalTitle">Add New Task</h2>
       <div class="form-group">
         <label>Task Title</label>
-        <input type="text" id="taskTitle" placeholder="What needs to be done?">
+        <input type="text" id="taskTitle" placeholder="What needs to be done?" oninput="autoSuggestFromTitle()">
       </div>
       <div class="form-group">
         <label>Date</label>
@@ -2579,30 +2599,20 @@
           <div class="mini-calendar" id="miniCalendar"></div>
         </div>
       </div>
-      <div class="form-group">
-        <label>Repeat</label>
-        <select id="taskRecur">
-          <option value="none" selected>Does not repeat</option>
-          <option value="daily">Every day</option>
-          <option value="weekdays">Weekdays (Mon–Fri)</option>
-          <option value="weekly">Every week</option>
-        </select>
-      </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Energy Required</label>
-          <select id="taskEnergy">
-            <option value="high">High</option>
-            <option value="medium" selected>Medium</option>
-            <option value="low">Low</option>
-          </select>
+          <label>Start Time</label>
+          <select id="taskStartTime"></select>
         </div>
         <div class="form-group">
-          <label>Work Type</label>
-          <select id="taskBrain">
-            <option value="deep">Deep Work</option>
-            <option value="shallow" selected>Shallow Work</option>
-            <option value="admin">Admin</option>
+          <label>Duration</label>
+          <select id="taskDuration">
+            <option value="15">15 min</option>
+            <option value="30" selected>30 min</option>
+            <option value="45">45 min</option>
+            <option value="60">1 hour</option>
+            <option value="90">1.5 hours</option>
+            <option value="120">2 hours</option>
           </select>
         </div>
       </div>
@@ -2626,29 +2636,45 @@
           </select>
         </div>
       </div>
-      <div class="form-row">
+      <div class="more-options-toggle" onclick="toggleAdvancedFields()">
+        <span id="moreOptionsLabel">More Options</span>
+        <svg id="moreOptionsIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+      </div>
+      <div id="advancedFields" style="display: none;">
         <div class="form-group">
-          <label>Start Time</label>
-          <select id="taskStartTime"></select>
-        </div>
-        <div class="form-group">
-          <label>Duration (min)</label>
-          <select id="taskDuration">
-            <option value="15">15 min</option>
-            <option value="30" selected>30 min</option>
-            <option value="45">45 min</option>
-            <option value="60">1 hour</option>
-            <option value="90">1.5 hours</option>
-            <option value="120">2 hours</option>
+          <label>Repeat</label>
+          <select id="taskRecur">
+            <option value="none" selected>Does not repeat</option>
+            <option value="daily">Every day</option>
+            <option value="weekdays">Weekdays (Mon–Fri)</option>
+            <option value="weekly">Every week</option>
           </select>
         </div>
-      </div>
-      <div class="form-group">
-        <label>Notes (optional)</label>
-        <textarea id="taskNotes" placeholder="Any additional details..."></textarea>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Energy Required</label>
+            <select id="taskEnergy">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Work Type</label>
+            <select id="taskBrain">
+              <option value="deep">Deep Work</option>
+              <option value="shallow" selected>Shallow Work</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notes (optional)</label>
+          <textarea id="taskNotes" placeholder="Any additional details..."></textarea>
+        </div>
       </div>
       <div class="modal-actions">
-        <span style="margin-right: auto; font-size: 0.75rem; color: var(--text-secondary); align-self: center;">Tip: press Ctrl+Enter to save</span>
+        <span style="margin-right: auto; font-size: 0.75rem; color: var(--text-secondary); align-self: center;">Ctrl+Enter to save · Esc to close</span>
         <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
         <button class="btn btn-primary" onclick="saveTask()">Save Task</button>
       </div>
@@ -3375,6 +3401,36 @@
     }
 
     // Task Management
+    function toggleAdvancedFields() {
+      const el = document.getElementById('advancedFields');
+      const label = document.getElementById('moreOptionsLabel');
+      const toggle = el.previousElementSibling;
+      const isOpen = el.style.display !== 'none';
+      el.style.display = isOpen ? 'none' : 'block';
+      label.textContent = isOpen ? 'More Options' : 'Fewer Options';
+      toggle.classList.toggle('open', !isOpen);
+    }
+
+    const TITLE_SUGGEST_MAP = [
+      { keywords: ['meeting', 'standup', 'sync', 'call', '1:1', 'one-on-one'], category: 'meeting', brain: 'shallow', energy: 'medium' },
+      { keywords: ['lunch', 'break', 'coffee', 'walk', 'snack', 'rest'], category: 'break', brain: 'shallow', energy: 'low' },
+      { keywords: ['read', 'gym', 'exercise', 'jog', 'meditate', 'yoga', 'run', 'workout'], category: 'personal', brain: 'shallow', energy: 'low' },
+    ];
+
+    function autoSuggestFromTitle() {
+      if (editingTaskId) return;
+      const title = document.getElementById('taskTitle').value.toLowerCase();
+      if (!title) return;
+      for (const entry of TITLE_SUGGEST_MAP) {
+        if (entry.keywords.some(kw => title.includes(kw))) {
+          document.getElementById('taskCategory').value = entry.category;
+          document.getElementById('taskBrain').value = entry.brain;
+          document.getElementById('taskEnergy').value = entry.energy;
+          return;
+        }
+      }
+    }
+
     function openModal(hour = null) {
       editingTaskId = null;
       document.getElementById('modalTitle').textContent = 'Add New Task';
@@ -3388,6 +3444,9 @@
       document.getElementById('taskCategory').value = 'work';
       document.getElementById('taskPriority').value = 'medium';
       document.getElementById('taskDuration').value = '30';
+      document.getElementById('advancedFields').style.display = 'none';
+      document.getElementById('moreOptionsLabel').textContent = 'More Options';
+      document.getElementById('moreOptionsIcon').parentElement.classList.remove('open');
       if (hour !== null) {
         const startTime = `${hour.toString().padStart(2, '0')}:00`;
         document.getElementById('taskStartTime').value = startTime;
@@ -3720,7 +3779,21 @@
       document.getElementById('taskStartTime').value = `${task.startHour.toString().padStart(2, '0')}:${task.startMin.toString().padStart(2, '0')}`;
       document.getElementById('taskDuration').value = task.duration;
       document.getElementById('taskNotes').value = task.notes || '';
+      const hasAdvanced = (task.recur && task.recur !== 'none') || (task.energyLevel && task.energyLevel !== 'medium') || (task.brainType && task.brainType !== 'shallow') || task.notes;
+      const advEl = document.getElementById('advancedFields');
+      const label = document.getElementById('moreOptionsLabel');
+      const toggle = advEl.previousElementSibling;
+      if (hasAdvanced) {
+        advEl.style.display = 'block';
+        label.textContent = 'Fewer Options';
+        toggle.classList.add('open');
+      } else {
+        advEl.style.display = 'none';
+        label.textContent = 'More Options';
+        toggle.classList.remove('open');
+      }
       document.getElementById('modalOverlay').classList.add('open');
+      document.getElementById('taskTitle').focus();
     }
 
     function deleteTask(id, event) {
@@ -3814,26 +3887,21 @@
         showToast('No completed tasks to clear');
         return;
       }
-      showConfirm({
-        title: 'Clear Completed',
-        message: `Clear ${completedCount} completed task${completedCount > 1 ? 's' : ''}?`,
-        confirmText: 'Clear',
-        onConfirm: () => {
-          const cleared = tasks.filter(t => t.completed);
-          tasks = tasks.filter(t => !t.completed);
-          store[currentDateKey] = tasks;
-          saveStore();
-          renderTasks();
-          updateStats();
-          showToast('Completed tasks cleared', 'Undo', () => {
-            tasks = [...tasks, ...cleared];
-            store[currentDateKey] = tasks;
-            saveStore();
-            renderTasks();
-            updateStats();
-            showToast('Tasks restored');
-          });
-        }
+      const cleared = tasks.filter(t => t.completed);
+      tasks = tasks.filter(t => !t.completed);
+      store[currentDateKey] = tasks;
+      saveStore();
+      renderTasks();
+      updateStats();
+      renderNowNext();
+      showToast(`${completedCount} task${completedCount > 1 ? 's' : ''} cleared`, 'Undo', () => {
+        tasks = [...tasks, ...cleared];
+        store[currentDateKey] = tasks;
+        saveStore();
+        renderTasks();
+        updateStats();
+        renderNowNext();
+        showToast('Tasks restored');
       });
     }
 
@@ -4960,6 +5028,12 @@
       if (e.key === 'Escape') { closeModal(); closeConfirmModal(); closeHabitModal(); exitFocusMode(); }
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && document.getElementById('modalOverlay').classList.contains('open')) {
         saveTask();
+      }
+      const tag = document.activeElement?.tagName;
+      const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+      if (!isInput) {
+        if (e.key === 'n' || e.key === 'N') { e.preventDefault(); openModal(); }
+        if (e.key === ' ') { e.preventDefault(); toggleTimer(); }
       }
     });
 
