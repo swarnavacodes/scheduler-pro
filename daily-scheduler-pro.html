@@ -3073,17 +3073,17 @@
       const ago = formatTimeAgo(cache.fetchedAt);
       el.innerHTML = `
         <div class="weather-main">
-          <span class="weather-emoji">${info.emoji}</span>
+          <span class="weather-emoji">${escapeHtml(info.emoji)}</span>
           <div>
-            <div class="weather-temp">${temp}°C</div>
-            <div class="weather-desc">${info.desc}</div>
+            <div class="weather-temp">${escapeHtml(temp + '°C')}</div>
+            <div class="weather-desc">${escapeHtml(info.desc)}</div>
           </div>
         </div>
         <div class="weather-sub">
-          <span>H: ${max}° · L: ${min}°</span>
+          <span>H: ${escapeHtml(max + '°')} · L: ${escapeHtml(min + '°')}</span>
           <span>${escapeHtml(cache.locationName)}</span>
         </div>
-        <div class="weather-updated">Updated ${ago}</div>
+        <div class="weather-updated">Updated ${escapeHtml(ago)}</div>
       `;
     }
 
@@ -3830,7 +3830,7 @@
       if (!task) return;
       showConfirm({
         title: 'Delete Task',
-        message: `Are you sure you want to delete "${task.title}"?`,
+        message: `Are you sure you want to delete "${escapeHtml(task.title)}"?`,
         confirmText: 'Delete',
         onConfirm: () => {
           const deleted = { task: { ...task }, dateKey: currentDateKey };
@@ -4051,7 +4051,7 @@
     }
 
     // Calendar view
-    let currentView = 'agenda';
+    let currentView = 'day';
     let calendarMonth = null;
 
     const categoryColors = {
