@@ -267,8 +267,22 @@ async function pushSync(storeObj) {
     const q = getPending();
     q.push({ store: storeObj, at: Date.now() });
     setPending([q[q.length-1]]);
+    // Notify user of sync failure
+    notifyUserOfSyncError(error.message);
   } else {
     updateSyncUI('synced');
+  }
+}
+
+function notifyUserOfSyncError(message) {
+  // Try to use app's showToast if available
+  if (typeof window.showToast === 'function') {
+    window.showToast('Sync failed: changes saved locally. Will retry when online.', 'Retry', () => {
+      flushQueue();
+    });
+  } else {
+    // Fallback: console warning
+    console.warn('[sync] Failed to sync:', message);
   }
 }
 
